@@ -1,0 +1,6 @@
+BETAFPV 900 RX
+ExpressLRS 3.3.1
+Target: BETAFPV_900_RX_via_UART
+Regulatory domain: EU433
+Build status: SUCCESS
+Experimental firmware. Hardware RF front-end may still be tuned for 900 MHz.
