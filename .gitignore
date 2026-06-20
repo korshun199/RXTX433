@@ -9,7 +9,7 @@ __pycache__/
 venv/
 .venv/
 
-# Linux
+# Linux/editor trash
 *~
 *.swp
 *.swo
