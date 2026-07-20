@@ -35,3 +35,6 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+tools/esp_programmer/venv/
+tools/esp_programmer/pycache/
+.pyc
