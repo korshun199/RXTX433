@@ -38,3 +38,10 @@ Thumbs.db
 tools/esp_programmer/venv/
 tools/esp_programmer/pycache/
 .pyc
+
+# ESP Programmer local build
+tools/esp_programmer/venv/
+tools/esp_programmer/build/
+tools/esp_programmer/dist/
+tools/esp_programmer/__pycache__/
+tools/esp_programmer/*.spec
