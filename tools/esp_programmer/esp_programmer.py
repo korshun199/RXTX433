@@ -12,7 +12,7 @@ from PySide6.QtCore import QThread, Signal, Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QFileDialog, QGridLayout, QGroupBox,
-    QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMessageBox,
+    QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMessageBox, QInputDialog,
     QPushButton, QPlainTextEdit, QProgressBar, QSpinBox, QTabWidget,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
@@ -756,15 +756,19 @@ class EspProgrammer(QMainWindow):
     def __init__(self):
         super().__init__()
         self.worker = None
-        self.setWindowTitle("ESP Programmer")
+        self.setWindowTitle("ESP Programmer (Trakror Corporation - 2026)")
         self.resize(1180, 760)
         root = QWidget()
         self.setCentralWidget(root)
         main = QVBoxLayout(root)
 
-        title = QLabel("ESP Programmer")
-        title.setStyleSheet("font-size: 24px; font-weight: bold;")
-        main.addWidget(title)
+        title1 = QLabel("ESP Programmer v2.0 2026  ")
+        title1.setStyleSheet("font-size: 24px; font-weight: bold;")
+        title2 = QLabel("(Sinelnikov Oleg)")
+        title2.setStyleSheet("font-size: 12px")
+        
+        main.addWidget(title1)
+        main.addWidget(title2)
         main.addWidget(QLabel("Диагностика ESP и просмотр бинарных прошивок"))
 
         self.tabs = QTabWidget()
@@ -805,6 +809,10 @@ class EspProgrammer(QMainWindow):
         mac.clicked.connect(self.read_mac)
         backup = QPushButton("Сохранить полный Flash")
         backup.clicked.connect(self.backup_flash)
+
+        write_firmware = QPushButton("Записать прошивку")
+        write_firmware.clicked.connect(self.write_firmware)
+
         open_hex = QPushButton("Открыть BIN в HEX Viewer")
         open_hex.clicked.connect(lambda: self.tabs.setCurrentWidget(self.hex_viewer))
         open_partitions = QPushButton("Посмотреть разделы Flash")
@@ -816,8 +824,9 @@ class EspProgrammer(QMainWindow):
         action_grid.addWidget(flash, 0, 1)
         action_grid.addWidget(mac, 1, 0)
         action_grid.addWidget(backup, 1, 1)
-        action_grid.addWidget(open_hex, 2, 0)
-        action_grid.addWidget(open_partitions, 2, 1)
+        action_grid.addWidget(write_firmware, 2, 0, 1, 2)
+        action_grid.addWidget(open_hex, 3, 0)
+        action_grid.addWidget(open_partitions, 3, 1)
         layout.addWidget(actions)
 
         status = QHBoxLayout()
@@ -868,7 +877,33 @@ class EspProgrammer(QMainWindow):
         port = self.selected_port()
         if not port:
             return []
-        return [sys.executable, "-m", "esptool", "--port", port, "--baud", self.baud_combo.currentText()]
+        if getattr(sys, "frozen", False):
+            esptool_exe = Path(sys.executable).with_name("esptool.exe")
+            if not esptool_exe.exists():
+                QMessageBox.critical(
+                    self,
+                    "esptool.exe не найден",
+                    f"Рядом с программой отсутствует файл:\n{esptool_exe}",
+                )
+                return []
+
+            return [
+                str(esptool_exe),
+                "--port",
+                port,
+                "--baud",
+                self.baud_combo.currentText(),
+            ]
+
+        return [
+            sys.executable,
+            "-m",
+            "esptool",
+            "--port",
+            port,
+            "--baud",
+            self.baud_combo.currentText(),
+        ]
 
     def run_command(self, command):
         if not command:
@@ -927,6 +962,91 @@ class EspProgrammer(QMainWindow):
         command = self.base_command()
         if command:
             command.extend(["read-flash", "0x000000", size_text, output_file])
+            self.run_command(command)
+
+    def write_firmware(self):
+        if not self.selected_port():
+            return
+
+        firmware_file, _ = QFileDialog.getOpenFileName(
+            self,
+            "Выбрать прошивку",
+            str(Path.home()),
+            "Firmware files (*.bin);;All files (*)",
+        )
+        if not firmware_file:
+            return
+
+        default_address = "0x000000"
+        address, ok = QInputDialog.getText(
+            self,
+            "Адрес записи",
+            "Начальный адрес прошивки:",
+            QLineEdit.Normal,
+            default_address,
+        )
+        if not ok:
+            return
+
+        address = address.strip()
+        try:
+            parsed_address = int(address, 0)
+        except ValueError:
+            QMessageBox.warning(
+                self,
+                "Неверный адрес",
+                "Адрес должен выглядеть как 0x000000, 0x1000 или 65536.",
+            )
+            return
+
+        if parsed_address < 0:
+            QMessageBox.warning(
+                self,
+                "Неверный адрес",
+                "Адрес не может быть отрицательным.",
+            )
+            return
+
+        file_size = Path(firmware_file).stat().st_size
+        answer = QMessageBox.question(
+            self,
+            "Подтверждение записи",
+            "Будет записан файл:\n"
+            f"{firmware_file}\n\n"
+            f"Размер: {file_size:,} байт (0x{file_size:X})\n"
+            f"Адрес: 0x{parsed_address:X}\n\n"
+            "Запись Flash изменит содержимое устройства. Продолжить?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+
+        command = self.base_command()
+        if command:
+            command.extend(
+                [
+                    "--before",
+                    "default-reset",
+                    "--after",
+                    "hard-reset",
+                    "write-flash",
+                    "--flash-mode",
+                    "keep",
+                    "--flash-freq",
+                    "keep",
+                    "--flash-size",
+                    "keep",
+                    f"0x{parsed_address:X}",
+                    firmware_file,
+                ]
+            )
+            self.console.insertPlainText(
+                "\n=== Запись прошивки ===\n"
+                f"Файл: {firmware_file}\n"
+                f"Адрес: 0x{parsed_address:X}\n"
+                f"Размер: {file_size:,} байт\n\n"
+            )
             self.run_command(command)
 
     def ask_flash_size(self):
