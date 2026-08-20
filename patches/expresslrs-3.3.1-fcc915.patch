@@ -1,0 +1,29 @@
+diff --git a/src/targets/betafpv_900.ini b/src/targets/betafpv_900.ini
+index 480ec5b..dd9accf 100644
+--- a/src/targets/betafpv_900.ini
++++ b/src/targets/betafpv_900.ini
+@@ -30,2 +30,12 @@ extends = env:BETAFPV_900_RX_via_UART
+ [env:BETAFPV_900_RX_via_WIFI]
+ extends = env:BETAFPV_900_RX_via_UART
++
++[env:BETAFPV_Nano_900_RX_via_UART]
++extends = env:Unified_ESP8285_900_RX_via_UART
++board_config = betafpv.rx_900.nano
++
++[env:BETAFPV_Nano_900_RX_via_WIFI]
++extends = env:BETAFPV_Nano_900_RX_via_UART
++
++[env:BETAFPV_Nano_900_RX_via_BetaflightPassthrough]
++extends = env:BETAFPV_Nano_900_RX_via_UART
+diff --git a/src/user_defines.txt b/src/user_defines.txt
+index 8f64744..a4b3817 100644
+--- a/src/user_defines.txt
++++ b/src/user_defines.txt
+@@ -22,6 +22,6 @@
+ #-DRegulatory_Domain_IN_866
+ #-DRegulatory_Domain_AU_433
+ #-DRegulatory_Domain_EU_433
+-#-DRegulatory_Domain_FCC_915
++-DRegulatory_Domain_FCC_915
+ #-DRegulatory_Domain_ISM_2400
+ #-DRegulatory_Domain_EU_CE_2400

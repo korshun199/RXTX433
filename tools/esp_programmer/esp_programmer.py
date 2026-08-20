@@ -929,19 +929,19 @@ class EspProgrammer(QMainWindow):
     def detect_chip(self):
         command = self.base_command()
         if command:
-            command.append("chip-id")
+            command.append("chip_id")
             self.run_command(command)
 
     def flash_id(self):
         command = self.base_command()
         if command:
-            command.append("flash-id")
+            command.append("flash_id")
             self.run_command(command)
 
     def read_mac(self):
         command = self.base_command()
         if command:
-            command.append("read-mac")
+            command.append("read_mac")
             self.run_command(command)
 
     def backup_flash(self):
